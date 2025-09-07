@@ -154,5 +154,25 @@ public_users.get('/async/author/:author', async (req, res) => {
   }
 });
 
+// TAREA 13: obtener libros por TÍTULO con async/await + Axios
+public_users.get('/async/title/:title', async (req, res) => {
+    try {
+      const { title } = req.params;
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+  
+      // Reutilizamos el endpoint síncrono existente /title/:title
+      const url = `${baseUrl}/title/${encodeURIComponent(title)}`;
+      const { data } = await axios.get(url);
+  
+      return res.status(200).json(data);
+    } catch (err) {
+      const status = err.response?.status || 500;
+      const message =
+        err.response?.data?.message ||
+        (status === 404 ? 'Books by title not found' : 'Unexpected error');
+      return res.status(status).json({ message });
+    }
+  });
+  
 
 module.exports.general = public_users;
