@@ -134,4 +134,25 @@ public_users.get('/async/isbn/:isbn', async (req, res) => {
   }
 });
 
+// TAREA 12: obtener libros por AUTOR con async/await + Axios
+public_users.get('/async/author/:author', async (req, res) => {
+  try {
+    const { author } = req.params;
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+
+    // Reutilizamos el endpoint síncrono existente /author/:author
+    const url = `${baseUrl}/author/${encodeURIComponent(author)}`;
+    const { data } = await axios.get(url);
+
+    return res.status(200).json(data);
+  } catch (err) {
+    const status = err.response?.status || 500;
+    const message =
+      err.response?.data?.message ||
+      (status === 404 ? 'Books by author not found' : 'Unexpected error');
+    return res.status(status).json({ message });
+  }
+});
+
+
 module.exports.general = public_users;
