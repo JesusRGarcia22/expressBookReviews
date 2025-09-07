@@ -1,6 +1,7 @@
 // router/general.js
 const express = require('express');
 const public_users = express.Router();
+const axios = require('axios'); // <-- Tarea 10: usaremos Axios
 
 // Base de libros (mismo directorio)
 const books = require('./booksdb.js');
@@ -27,7 +28,7 @@ public_users.post('/register', (req, res) => {
     return res.status(400).json({ message: 'Username and password are required' });
   }
 
-  // Si tu curso define isValid como “usuario no existe”, úsalo; si no, verificamos aquí
+  // Verificar si ya existe
   const exists = users.some(u => u.username === username);
   if (exists) {
     return res.status(409).json({ message: 'User already exists!' });
@@ -82,9 +83,25 @@ public_users.get('/review/:isbn', (req, res) => {
   const book = books[isbn];
   if (!book) return res.status(404).json({ message: 'Book not found' });
 
-  // Aseguramos objeto
   const reviews = book.reviews || {};
   return res.status(200).json(reviews);
+});
+
+/**
+ * TAREA 10: lista de libros usando async/await + Axios
+ * (reutilizamos nuestro propio endpoint síncrono '/')
+ */
+public_users.get('/async/books', async (req, res) => {
+  try {
+    // Ajusta el puerto si tu app NO corre en 5000
+    const resp = await axios.get('http://localhost:5000/');
+    return res.status(200).json(resp.data);
+  } catch (err) {
+    return res.status(500).json({
+      message: 'Error fetching books asynchronously',
+      error: String(err),
+    });
+  }
 });
 
 module.exports.general = public_users;
