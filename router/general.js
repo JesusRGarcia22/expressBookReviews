@@ -1,80 +1,90 @@
+// router/general.js
 const express = require('express');
 const public_users = express.Router();
 
-// Base de datos local de libros (mismo directorio)
+// Base de libros (mismo directorio)
 const books = require('./booksdb.js');
 
-// (se usarán más adelante)
-let isValid = require('./auth_users.js').isValid;
-let users   = require('./auth_users.js').users;
+// Estos vienen de auth_users.js (el curso ya lo trae)
+const { isValid, users } = require('./auth_users.js');
 
 /**
- * Tarea 1: Listar todos los libros
- * GET /
+ * TAREA 1: todos los libros
  */
 public_users.get('/', (req, res) => {
   return res.status(200).send(JSON.stringify(books, null, 4));
 });
 
 /**
- * Tarea 2: Libro por ISBN
- * GET /isbn/:isbn
+ * TAREA 6: registrar un nuevo usuario
+ * Body esperado: { "username": "user", "password": "pass" }
+ */
+public_users.post('/register', (req, res) => {
+  const { username, password } = req.body || {};
+
+  // Validaciones básicas
+  if (!username || !password) {
+    return res.status(400).json({ message: 'Username and password are required' });
+  }
+
+  // Si tu curso define isValid como “usuario no existe”, úsalo; si no, verificamos aquí
+  const exists = users.some(u => u.username === username);
+  if (exists) {
+    return res.status(409).json({ message: 'User already exists!' });
+  }
+
+  // Registrar
+  users.push({ username, password });
+  return res
+    .status(201)
+    .json({ message: 'User successfully registered. Now you can login' });
+});
+
+/**
+ * TAREA 2: por ISBN
  */
 public_users.get('/isbn/:isbn', (req, res) => {
   const { isbn } = req.params;
   const book = books[isbn];
-  if (!book) {
-    return res.status(404).json({ message: `No existe libro con ISBN ${isbn}` });
-  }
-  return res.status(200).json({
-    author: book.author,
-    title : book.title,
-    reviews: book.reviews
-  });
+  if (!book) return res.status(404).json({ message: 'Book not found' });
+  return res.status(200).json(book);
 });
 
 /**
- * Tarea 3: Libros por autor
- * GET /author/:author
+ * TAREA 3: por autor
  */
 public_users.get('/author/:author', (req, res) => {
-  const authorQ = req.params.author.trim().toLowerCase();
+  const target = (req.params.author || '').toLowerCase();
   const result = Object.entries(books)
-    .filter(([_, b]) => (b.author || '').toLowerCase() === authorQ)
-    .map(([isbn, b]) => ({ isbn, author: b.author, title: b.title, reviews: b.reviews }));
+    .filter(([, b]) => (b.author || '').toLowerCase() === target)
+    .map(([isbn, b]) => ({ isbn, ...b }));
+
   return res.status(200).json(result);
 });
 
 /**
- * Tarea 4: Libros por título
- * GET /title/:title
+ * TAREA 4: por título
  */
 public_users.get('/title/:title', (req, res) => {
-  const titleQ = req.params.title.trim().toLowerCase();
+  const target = (req.params.title || '').toLowerCase();
   const result = Object.entries(books)
-    .filter(([_, b]) => (b.title || '').toLowerCase() === titleQ)
-    .map(([isbn, b]) => ({ isbn, author: b.author, title: b.title, reviews: b.reviews }));
+    .filter(([, b]) => (b.title || '').toLowerCase() === target)
+    .map(([isbn, b]) => ({ isbn, ...b }));
+
   return res.status(200).json(result);
 });
 
 /**
- * Tarea 5: Reseñas por ISBN
- * GET /review/:isbn
- * Devuelve directamente el objeto de reseñas del libro.
+ * TAREA 5: reseñas por ISBN
  */
 public_users.get('/review/:isbn', (req, res) => {
   const { isbn } = req.params;
   const book = books[isbn];
-  if (!book) {
-    return res.status(404).json({ message: `No existe libro con ISBN ${isbn}` });
-  }
-  // Si no hay reseñas, devolvemos un objeto vacío ({}), que es lo que espera el lab.
-  return res.status(200).json(book.reviews || {});
-});
+  if (!book) return res.status(404).json({ message: 'Book not found' });
 
-/* Placeholder (se implementará después) */
-public_users.post('/register', (req, res) => {
-  return res.status(300).json({ message: 'Yet to be implemented' });
+  // Aseguramos objeto
+  const reviews = book.reviews || {};
+  return res.status(200).json(reviews);
 });
 
 module.exports.general = public_users;
