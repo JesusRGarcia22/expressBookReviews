@@ -1,74 +1,76 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
-let books = require('./booksdb.js'); // ✅ corregido: está en la misma carpeta
+let books = require('./booksdb.js'); // está en la MISMA carpeta
 
 const regd_users = express.Router();
 
 let users = [];
 
 // =============================
-// Funciones auxiliares
+// Helpers
 // =============================
+const isValid = (username) => users.some(u => u.username === username);
 
-// Verificar si un username ya existe
-const isValid = (username) => {
-  return users.some((user) => user.username === username);
-};
-
-// Autenticar usuario
-const authenticatedUser = (username, password) => {
-  return users.some((user) => user.username === username && user.password === password);
-};
+const authenticatedUser = (username, password) =>
+  users.some(u => u.username === username && u.password === password);
 
 // =============================
 // Rutas
 // =============================
 
-// Task 7: Login de usuario registrado
+// Tarea 7: Login
 regd_users.post('/login', (req, res) => {
   const { username, password } = req.body;
 
-  if (!username || !password) {
+  if (!username || !password)
     return res.status(400).json({ message: 'Faltan credenciales' });
-  }
 
-  if (authenticatedUser(username, password)) {
-    let accessToken = jwt.sign({ username: username }, 'access', { expiresIn: '1h' });
-    req.session.authorization = { accessToken, username };
-    return res.status(200).json({ message: 'Login exitoso.' });
-  } else {
+  if (!authenticatedUser(username, password))
     return res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
-  }
+
+  const accessToken = jwt.sign({ username }, 'access', { expiresIn: '1h' });
+  req.session.authorization = { accessToken, username };
+  return res.status(200).json({ message: 'Login exitoso.' });
 });
 
-// Task 8: Agregar o modificar reseña de un libro
+// Tarea 8: Agregar o modificar reseña
 regd_users.put('/auth/review/:isbn', (req, res) => {
-  const isbn = req.params.isbn;
+  const { isbn } = req.params;
   const review = req.query.review;
   const username = req.session.authorization?.username;
 
-  if (!username) {
-    return res.status(403).json({ message: 'Usuario no autenticado' });
-  }
+  if (!username) return res.status(403).json({ message: 'Usuario no autenticado' });
+  if (!books[isbn]) return res.status(404).json({ message: 'Libro no encontrado' });
+  if (!review) return res.status(400).json({ message: 'Debe enviar una reseña' });
 
-  if (!books[isbn]) {
-    return res.status(404).json({ message: 'Libro no encontrado' });
-  }
-
-  if (!review) {
-    return res.status(400).json({ message: 'Debe enviar una reseña' });
-  }
-
-  // Si no existe reseñas, inicializamos
-  if (!books[isbn].reviews) {
-    books[isbn].reviews = {};
-  }
-
-  // Agregar o modificar reseña del usuario
+  if (!books[isbn].reviews) books[isbn].reviews = {};
   books[isbn].reviews[username] = review;
 
   return res.status(200).json({
     message: 'Reseña agregada/modificada con éxito',
+    reviews: books[isbn].reviews
+  });
+});
+
+// Tarea 9: Eliminar reseña propia
+regd_users.delete('/auth/review/:isbn', (req, res) => {
+  const { isbn } = req.params;
+  const username = req.session.authorization?.username;
+
+  if (!username) return res.status(403).json({ message: 'Usuario no autenticado' });
+  if (!books[isbn]) return res.status(404).json({ message: 'Libro no encontrado' });
+
+  const reviews = books[isbn].reviews || {};
+
+  if (!reviews[username]) {
+    return res.status(404).json({ message: 'No existe reseña del usuario para este libro' });
+  }
+
+  delete reviews[username];
+  books[isbn].reviews = reviews;
+
+  return res.status(200).json({
+    message: 'Reseña eliminada con éxito',
     reviews: books[isbn].reviews
   });
 });
