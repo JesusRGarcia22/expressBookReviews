@@ -1,68 +1,83 @@
-// router/general.js
 const express = require('express');
 const public_users = express.Router();
 
-// booksdb.js está en la MISMA carpeta que este archivo
+// ✅ booksdb.js está en la MISMA carpeta que general.js
 const books = require('./booksdb.js');
 
-// (se usará en tareas posteriores)
+// (todavía no lo usas, pero se mantiene para tareas posteriores)
 let isValid = require('./auth_users.js').isValid;
 let users   = require('./auth_users.js').users;
 
-/**
- * Tarea 1: listar TODOS los libros
- */
+// =============================
+// Tarea 1: devolver TODOS los libros
+// =============================
 public_users.get('/', (req, res) => {
   return res.status(200).send(JSON.stringify(books, null, 4));
 });
 
-/**
- * Tarea 2: detalles por ISBN
- * Ej: /isbn/1
- */
-public_users.get('/isbn/:isbn', (req, res) => {
-  const { isbn } = req.params;
-  const book = books[isbn];
-
-  if (!book) {
-    return res.status(404).json({ message: 'Book not found for given ISBN' });
-  }
-  return res.status(200).send(JSON.stringify(book, null, 4));
-});
-
-/**
- * Tarea 3: buscar libros por AUTOR (pueden ser varios)
- * Ej: /author/Chinua Achebe
- * Coincidencia case-insensitive.
- */
-public_users.get('/author/:author', (req, res) => {
-  const authorParam = (req.params.author || '').trim().toLowerCase();
-
-  // Recorremos las claves (ISBNs) del objeto books
-  const matches = Object.keys(books).reduce((acc, isbn) => {
-    const b = books[isbn];
-    if (b.author && b.author.toLowerCase() === authorParam) {
-      // Incluimos el ISBN para referencia
-      acc.push({ isbn, ...b });
-    }
-    return acc;
-  }, []);
-
-  if (matches.length === 0) {
-    return res.status(404).json({ message: 'No books found for given author' });
-  }
-  return res.status(200).send(JSON.stringify(matches, null, 4));
-});
-
-// Placeholders para tareas siguientes
+// =============================
+// Registrar usuario (placeholder)
+// =============================
 public_users.post('/register', (req, res) => {
   return res.status(300).json({ message: 'Yet to be implemented' });
 });
 
-public_users.get('/title/:title', (req, res) => {
-  return res.status(300).json({ message: 'Yet to be implemented' });
+// =============================
+// Tarea 2: Buscar libro por ISBN
+// =============================
+public_users.get('/isbn/:isbn', (req, res) => {
+  const isbn = req.params.isbn;
+
+  if (books[isbn]) {
+    return res.status(200).json(books[isbn]);
+  } else {
+    return res.status(404).json({ message: "No se encontró un libro con ese ISBN." });
+  }
 });
 
+// =============================
+// Tarea 3: Buscar libro por autor
+// =============================
+public_users.get('/author/:author', (req, res) => {
+  const author = req.params.author.toLowerCase();
+  let results = [];
+
+  for (let isbn in books) {
+    if (books[isbn].author && books[isbn].author.toLowerCase() === author) {
+      results.push({ isbn, ...books[isbn] });
+    }
+  }
+
+  if (results.length > 0) {
+    return res.status(200).json(results);
+  } else {
+    return res.status(404).json({ message: "No se encontraron libros de ese autor." });
+  }
+});
+
+// =============================
+// Tarea 4: Buscar libro por título
+// =============================
+public_users.get('/title/:title', (req, res) => {
+  const title = req.params.title.toLowerCase();
+  let results = [];
+
+  for (let isbn in books) {
+    if (books[isbn].title && books[isbn].title.toLowerCase() === title) {
+      results.push({ isbn, ...books[isbn] });
+    }
+  }
+
+  if (results.length > 0) {
+    return res.status(200).json(results);
+  } else {
+    return res.status(404).json({ message: "No se encontró ningún libro con ese título." });
+  }
+});
+
+// =============================
+// Obtener reseñas por ISBN (placeholder)
+// =============================
 public_users.get('/review/:isbn', (req, res) => {
   return res.status(300).json({ message: 'Yet to be implemented' });
 });
