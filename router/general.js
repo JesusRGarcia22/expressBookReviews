@@ -16,16 +16,25 @@ public_users.get('/', (req, res) => {
 });
 
 // =============================
+// Tarea 2: buscar libro por ISBN
+// =============================
+public_users.get('/isbn/:isbn', (req, res) => {
+  const { isbn } = req.params;    // extraer el ISBN de la URL
+  const book = books[isbn];       // buscar en el objeto books
+
+  if (!book) {
+    return res.status(404).json({ message: `Book with ISBN ${isbn} not found` });
+  }
+
+  return res.status(200).send(JSON.stringify(book, null, 4));
+});
+
+// =============================
 // Placeholders para tareas siguientes
 // =============================
 
 // Registrar usuario (a implementar después)
 public_users.post('/register', (req, res) => {
-  return res.status(300).json({ message: 'Yet to be implemented' });
-});
-
-// Buscar libro por ISBN
-public_users.get('/isbn/:isbn', (req, res) => {
   return res.status(300).json({ message: 'Yet to be implemented' });
 });
 
