@@ -1,84 +1,79 @@
 const express = require('express');
 const public_users = express.Router();
 
-// ✅ booksdb.js está en la MISMA carpeta que general.js
+// Base de datos local de libros (mismo directorio)
 const books = require('./booksdb.js');
 
-// (todavía no lo usas, pero se mantiene para tareas posteriores)
+// (se usarán más adelante)
 let isValid = require('./auth_users.js').isValid;
 let users   = require('./auth_users.js').users;
 
-// =============================
-// Tarea 1: devolver TODOS los libros
-// =============================
+/**
+ * Tarea 1: Listar todos los libros
+ * GET /
+ */
 public_users.get('/', (req, res) => {
   return res.status(200).send(JSON.stringify(books, null, 4));
 });
 
-// =============================
-// Registrar usuario (placeholder)
-// =============================
-public_users.post('/register', (req, res) => {
-  return res.status(300).json({ message: 'Yet to be implemented' });
-});
-
-// =============================
-// Tarea 2: Buscar libro por ISBN
-// =============================
+/**
+ * Tarea 2: Libro por ISBN
+ * GET /isbn/:isbn
+ */
 public_users.get('/isbn/:isbn', (req, res) => {
-  const isbn = req.params.isbn;
-
-  if (books[isbn]) {
-    return res.status(200).json(books[isbn]);
-  } else {
-    return res.status(404).json({ message: "No se encontró un libro con ese ISBN." });
+  const { isbn } = req.params;
+  const book = books[isbn];
+  if (!book) {
+    return res.status(404).json({ message: `No existe libro con ISBN ${isbn}` });
   }
+  return res.status(200).json({
+    author: book.author,
+    title : book.title,
+    reviews: book.reviews
+  });
 });
 
-// =============================
-// Tarea 3: Buscar libro por autor
-// =============================
+/**
+ * Tarea 3: Libros por autor
+ * GET /author/:author
+ */
 public_users.get('/author/:author', (req, res) => {
-  const author = req.params.author.toLowerCase();
-  let results = [];
-
-  for (let isbn in books) {
-    if (books[isbn].author && books[isbn].author.toLowerCase() === author) {
-      results.push({ isbn, ...books[isbn] });
-    }
-  }
-
-  if (results.length > 0) {
-    return res.status(200).json(results);
-  } else {
-    return res.status(404).json({ message: "No se encontraron libros de ese autor." });
-  }
+  const authorQ = req.params.author.trim().toLowerCase();
+  const result = Object.entries(books)
+    .filter(([_, b]) => (b.author || '').toLowerCase() === authorQ)
+    .map(([isbn, b]) => ({ isbn, author: b.author, title: b.title, reviews: b.reviews }));
+  return res.status(200).json(result);
 });
 
-// =============================
-// Tarea 4: Buscar libro por título
-// =============================
+/**
+ * Tarea 4: Libros por título
+ * GET /title/:title
+ */
 public_users.get('/title/:title', (req, res) => {
-  const title = req.params.title.toLowerCase();
-  let results = [];
-
-  for (let isbn in books) {
-    if (books[isbn].title && books[isbn].title.toLowerCase() === title) {
-      results.push({ isbn, ...books[isbn] });
-    }
-  }
-
-  if (results.length > 0) {
-    return res.status(200).json(results);
-  } else {
-    return res.status(404).json({ message: "No se encontró ningún libro con ese título." });
-  }
+  const titleQ = req.params.title.trim().toLowerCase();
+  const result = Object.entries(books)
+    .filter(([_, b]) => (b.title || '').toLowerCase() === titleQ)
+    .map(([isbn, b]) => ({ isbn, author: b.author, title: b.title, reviews: b.reviews }));
+  return res.status(200).json(result);
 });
 
-// =============================
-// Obtener reseñas por ISBN (placeholder)
-// =============================
+/**
+ * Tarea 5: Reseñas por ISBN
+ * GET /review/:isbn
+ * Devuelve directamente el objeto de reseñas del libro.
+ */
 public_users.get('/review/:isbn', (req, res) => {
+  const { isbn } = req.params;
+  const book = books[isbn];
+  if (!book) {
+    return res.status(404).json({ message: `No existe libro con ISBN ${isbn}` });
+  }
+  // Si no hay reseñas, devolvemos un objeto vacío ({}), que es lo que espera el lab.
+  return res.status(200).json(book.reviews || {});
+});
+
+/* Placeholder (se implementará después) */
+public_users.post('/register', (req, res) => {
   return res.status(300).json({ message: 'Yet to be implemented' });
 });
 
