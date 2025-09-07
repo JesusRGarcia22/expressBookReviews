@@ -1,7 +1,7 @@
 // router/general.js
 const express = require('express');
 const public_users = express.Router();
-const axios = require('axios'); // <-- Tarea 10: usaremos Axios
+const axios = require('axios');
 
 // Base de libros (mismo directorio)
 const books = require('./booksdb.js');
@@ -10,31 +10,32 @@ const books = require('./booksdb.js');
 const { isValid, users } = require('./auth_users.js');
 
 /**
+ * ==============================
  * TAREA 1: todos los libros
+ * ==============================
  */
 public_users.get('/', (req, res) => {
   return res.status(200).send(JSON.stringify(books, null, 4));
 });
 
 /**
+ * ==============================
  * TAREA 6: registrar un nuevo usuario
  * Body esperado: { "username": "user", "password": "pass" }
+ * ==============================
  */
 public_users.post('/register', (req, res) => {
   const { username, password } = req.body || {};
 
-  // Validaciones básicas
   if (!username || !password) {
     return res.status(400).json({ message: 'Username and password are required' });
   }
 
-  // Verificar si ya existe
   const exists = users.some(u => u.username === username);
   if (exists) {
     return res.status(409).json({ message: 'User already exists!' });
   }
 
-  // Registrar
   users.push({ username, password });
   return res
     .status(201)
@@ -42,7 +43,9 @@ public_users.post('/register', (req, res) => {
 });
 
 /**
+ * ==============================
  * TAREA 2: por ISBN
+ * ==============================
  */
 public_users.get('/isbn/:isbn', (req, res) => {
   const { isbn } = req.params;
@@ -52,7 +55,9 @@ public_users.get('/isbn/:isbn', (req, res) => {
 });
 
 /**
+ * ==============================
  * TAREA 3: por autor
+ * ==============================
  */
 public_users.get('/author/:author', (req, res) => {
   const target = (req.params.author || '').toLowerCase();
@@ -64,7 +69,9 @@ public_users.get('/author/:author', (req, res) => {
 });
 
 /**
+ * ==============================
  * TAREA 4: por título
+ * ==============================
  */
 public_users.get('/title/:title', (req, res) => {
   const target = (req.params.title || '').toLowerCase();
@@ -76,7 +83,9 @@ public_users.get('/title/:title', (req, res) => {
 });
 
 /**
+ * ==============================
  * TAREA 5: reseñas por ISBN
+ * ==============================
  */
 public_users.get('/review/:isbn', (req, res) => {
   const { isbn } = req.params;
@@ -88,19 +97,40 @@ public_users.get('/review/:isbn', (req, res) => {
 });
 
 /**
- * TAREA 10: lista de libros usando async/await + Axios
- * (reutilizamos nuestro propio endpoint síncrono '/')
+ * ==============================
+ * TAREA 10: lista de libros con async/await + Axios
+ * ==============================
  */
 public_users.get('/async/books', async (req, res) => {
   try {
-    // Ajusta el puerto si tu app NO corre en 5000
-    const resp = await axios.get('http://localhost:5000/');
-    return res.status(200).json(resp.data);
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const { data } = await axios.get(`${baseUrl}/`);
+    return res.status(200).json(data);
   } catch (err) {
-    return res.status(500).json({
-      message: 'Error fetching books asynchronously',
-      error: String(err),
-    });
+    return res
+      .status(err.response?.status || 500)
+      .json({ message: 'Unexpected error' });
+  }
+});
+
+/**
+ * ==============================
+ * TAREA 11: obtener libro por ISBN con async/await + Axios
+ * ==============================
+ */
+public_users.get('/async/isbn/:isbn', async (req, res) => {
+  try {
+    const { isbn } = req.params;
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const url = `${baseUrl}/isbn/${encodeURIComponent(isbn)}`;
+    const { data } = await axios.get(url);
+    return res.status(200).json(data);
+  } catch (err) {
+    const status = err.response?.status || 500;
+    const message =
+      err.response?.data?.message ||
+      (status === 404 ? 'Book not found' : 'Unexpected error');
+    return res.status(status).json({ message });
   }
 });
 
